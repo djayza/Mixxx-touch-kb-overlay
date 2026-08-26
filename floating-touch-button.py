@@ -29,7 +29,7 @@ class PureWaylandTouchSurface(Gtk.Window):
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, False)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, False)
         
-        # Rigid capsule boundary dimensions
+        # Rigid capsule boundary dimension profiles
         self.width = 70
         self.height = 70
         self.set_size_request(self.width, self.height)
@@ -72,30 +72,30 @@ class PureWaylandTouchSurface(Gtk.Window):
                         Gdk.EventMask.POINTER_MOTION_MASK)
 
     def on_draw(self, widget, cr):
-        """Draws the yellow AssistiveTouch circle graphic natively on the canvas surface"""
+        """Draws the gray AssistiveTouch circle graphic natively on the canvas surface"""
         cr.set_source_rgba(0, 0, 0, 0)
         cr.set_operator(cairo.Operator.SOURCE)
         cr.paint()
         cr.set_operator(cairo.Operator.OVER)
 
-        # Circle Fill (Visual feedback changes color based on lock state)
+        # Circle Fill (translucent grays)
         if self.drag_unlocked:
-            cr.set_source_rgb(1.0, 0.3, 0.0) # Flashes distinct orange when ready to drag
+            cr.set_source_rgba(0.2, 0.6, 1.0, 0.8) # Translucent light blue when unlocked
         elif self.is_pressed:
-            cr.set_source_rgb(0.8, 0.53, 0.0) # Dark yellow on press
+            cr.set_source_rgba(0.3, 0.3, 0.3, 0.8) # Darker gray on tap
         else:
-            cr.set_source_rgb(1.0, 0.66, 0.0) # Default crisp yellow assist capsule
+            cr.set_source_rgba(0.15, 0.15, 0.15, 0.7) # Beautiful translucent dark gray
             
         cr.arc(35, 35, 32, 0, 2 * 3.1415926)
         cr.fill_preserve()
 
         # Crisp White Outer Ring Border Outline
-        cr.set_source_rgb(1.0, 1.0, 1.0)
+        cr.set_source_rgba(1.0, 1.0, 1.0, 0.8)
         cr.set_line_width(3)
         cr.stroke()
 
         # Text Rendering ('KB')
-        cr.set_source_rgb(0.0, 0.0, 0.0)
+        cr.set_source_rgba(1.0, 1.0, 1.0, 0.9) # Clean white text
         cr.select_font_face("DejaVu Sans", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
         cr.set_font_size(18)
         
@@ -107,7 +107,7 @@ class PureWaylandTouchSurface(Gtk.Window):
     def on_drag_unlock_timeout(self):
         """Triggers precisely after holding for 1 second to unlock dragging"""
         self.drag_unlocked = True
-        self.queue_draw() # Trigger window paint to flash orange feedback
+        self.queue_draw() # Trigger repaint to show unlock color
         print("Drag Lock Unlocked: Ready to reposition.")
         return False
 
@@ -144,21 +144,17 @@ class PureWaylandTouchSurface(Gtk.Window):
         return False
 
     def on_motion_notify(self, widget, event):
-        # Calculate cursor tracking displacement from the starting tap vector
         dx = event.x_root - self.start_mouse_x
         dy = event.y_root - self.start_mouse_y
         
-        # ONLY execute motion math if the 1-second hold timer has completed and unlocked states
         if self.drag_unlocked:
             if abs(dx) > 5 or abs(dy) > 5:
                 self.is_dragging = True
-                # Kill vanish timer since we are actively dragging now
                 if self.vanish_timer_id is not None:
                     GLib.source_remove(self.vanish_timer_id)
                     self.vanish_timer_id = None
             
             if self.is_dragging:
-                # Update positioning margins fluidly across the canvas surface maps
                 temp_x = max(0, int(self.start_margin_x + dx))
                 temp_y = max(0, int(self.start_margin_y + dy))
                 
@@ -173,20 +169,18 @@ class PureWaylandTouchSurface(Gtk.Window):
             self.cancel_timers()
             
             if self.is_dragging and self.drag_unlocked:
-                # Save final landing coordinates safely into storage memory variables
                 dx = event.x_root - self.start_mouse_x
                 dy = event.y_root - self.start_mouse_y
                 self.current_x = max(0, int(self.start_margin_x + dx))
                 self.current_y = max(0, int(self.start_margin_y + dy))
             else:
-                # Quick single tap toggles the virtual keyboard script layout cleanly
                 duration = time.time() - self.press_time
                 if duration < 0.4:
                     subprocess.Popen(["/home/mixxx/mixxx-kb-toggle.sh"])
             
             self.is_dragging = False
             self.drag_unlocked = False
-            self.queue_draw() # Reset button color back to standard yellow
+            self.queue_draw() # Reset color back to gray
             return True
         return False
 
