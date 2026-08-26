@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Mixxx KB Button Toggle
+Comment=Turn the floating touch overlay keyboard button on or off
+Exec=/home/mixxx/mixxx-kb-menu-toggle.sh
+Icon=input-keyboard
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupNotify=false
