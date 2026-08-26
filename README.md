@@ -51,3 +51,22 @@ To automate your floating gray capsule to initialize automatically every single 
 # Add this line at the bottom of your autostart file profile:
 /home/mixxx/mixxx-touch-kb-overlay/mixxx-kb-menu-toggle.sh &
 ```
+
+---
+
+## 📸 Application Interface Previews
+
+To see the native overlay interface assets in action, view the operational layouts below:
+
+<table width="100%">
+  <tr>
+    <td width="50%" align="center">
+      <b>🎹 Active Live Keyboard Overlay View</b><br><br>
+      <img src="screenshot_live.png" width="100%" alt="Active Keyboard Deck Search Mode Preview">
+    </td>
+    <td width="50%" align="center">
+      <b>🛠 Accessories System Menu Toggle</b><br><br>
+      <img src="screenshot_menu.png" width="100%" alt="Accessories Menu Launcher Control Switch View">
+    </td>
+  </tr>
+</table>
