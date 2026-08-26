@@ -72,30 +72,30 @@ class PureWaylandTouchSurface(Gtk.Window):
                         Gdk.EventMask.POINTER_MOTION_MASK)
 
     def on_draw(self, widget, cr):
-        """Draws the gray AssistiveTouch circle graphic natively on the canvas surface"""
+        """Draws the solid gray AssistiveTouch circle graphic natively on the canvas surface"""
         cr.set_source_rgba(0, 0, 0, 0)
         cr.set_operator(cairo.Operator.SOURCE)
         cr.paint()
         cr.set_operator(cairo.Operator.OVER)
 
-        # Circle Fill (translucent grays)
+        # Circle Fill (Solid high-performance opaque grays)
         if self.drag_unlocked:
-            cr.set_source_rgba(0.2, 0.6, 1.0, 0.8) # Translucent light blue when unlocked
+            cr.set_source_rgb(0.2, 0.6, 1.0) # Solid crisp light blue when unlocked
         elif self.is_pressed:
-            cr.set_source_rgba(0.3, 0.3, 0.3, 0.8) # Darker gray on tap
+            cr.set_source_rgb(0.2, 0.2, 0.2) # Dark premium charcoal gray on tap
         else:
-            cr.set_source_rgba(0.15, 0.15, 0.15, 0.7) # Beautiful translucent dark gray
+            cr.set_source_rgb(0.35, 0.35, 0.35) # Opaque slate gray
             
         cr.arc(35, 35, 32, 0, 2 * 3.1415926)
         cr.fill_preserve()
 
         # Crisp White Outer Ring Border Outline
-        cr.set_source_rgba(1.0, 1.0, 1.0, 0.8)
+        cr.set_source_rgb(1.0, 1.0, 1.0)
         cr.set_line_width(3)
         cr.stroke()
 
         # Text Rendering ('KB')
-        cr.set_source_rgba(1.0, 1.0, 1.0, 0.9) # Clean white text
+        cr.set_source_rgb(1.0, 1.0, 1.0) # Solid clean white text
         cr.select_font_face("DejaVu Sans", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
         cr.set_font_size(18)
         
@@ -109,6 +109,7 @@ class PureWaylandTouchSurface(Gtk.Window):
         self.drag_unlocked = True
         self.queue_draw() # Trigger repaint to show unlock color
         print("Drag Lock Unlocked: Ready to reposition.")
+        self.drag_unlock_timer_id = None
         return False
 
     def on_long_press_vanish_timeout(self):
@@ -118,6 +119,7 @@ class PureWaylandTouchSurface(Gtk.Window):
             subprocess.Popen(["pkill", "-x", "wvkbd-mobintl"])
             self.destroy()
             sys.exit(0)
+        self.vanish_timer_id = None
         return False
 
     def on_button_press(self, widget, event):
@@ -128,38 +130,39 @@ class PureWaylandTouchSurface(Gtk.Window):
             self.is_pressed = True
             self.queue_draw()
             
-            # Lock coordinates footprint maps
-            self.start_mouse_x = event.x_root
-            self.start_mouse_y = event.y_root
+            # Use Local relative coordinate grids to completely fix the 1/2 screen cutoff limits
+            self.start_mouse_x = event.x
+            self.start_mouse_y = event.y
             self.start_margin_x = self.current_x
             self.start_margin_y = self.current_y
             
-            # Start the 1-second drag unlock countdown
+            # Clear old timers safely
             self.cancel_timers()
             self.drag_unlock_timer_id = GLib.timeout_add(1000, self.on_drag_unlock_timeout)
-            
-            # Start the 3-second vanish countdown
             self.vanish_timer_id = GLib.timeout_add(3000, self.on_long_press_vanish_timeout)
             return True
         return False
 
     def on_motion_notify(self, widget, event):
-        dx = event.x_root - self.start_mouse_x
-        dy = event.y_root - self.start_mouse_y
+        # Calculate cursor tracking displacement locally inside the widget frame
+        dx = event.x - self.start_mouse_x
+        dy = event.y - self.start_mouse_y
         
         if self.drag_unlocked:
-            if abs(dx) > 5 or abs(dy) > 5:
+            if abs(dx) > 4 or abs(dy) > 4:
                 self.is_dragging = True
                 if self.vanish_timer_id is not None:
                     GLib.source_remove(self.vanish_timer_id)
                     self.vanish_timer_id = None
             
             if self.is_dragging:
-                temp_x = max(0, int(self.start_margin_x + dx))
-                temp_y = max(0, int(self.start_margin_y + dy))
+                # Accumulate the relative motion increments into the margins
+                # This breaks the boundary walls and unlocks full 100% cross screen movement
+                self.current_x = max(0, int(self.current_x + dx))
+                self.current_y = max(0, int(self.current_y + dy))
                 
-                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, temp_x)
-                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, temp_y)
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, self.current_x)
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, self.current_y)
                 return True
         return False
 
@@ -168,19 +171,14 @@ class PureWaylandTouchSurface(Gtk.Window):
             self.is_pressed = False
             self.cancel_timers()
             
-            if self.is_dragging and self.drag_unlocked:
-                dx = event.x_root - self.start_mouse_x
-                dy = event.y_root - self.start_mouse_y
-                self.current_x = max(0, int(self.start_margin_x + dx))
-                self.current_y = max(0, int(self.start_margin_y + dy))
-            else:
+            if not self.is_dragging:
                 duration = time.time() - self.press_time
                 if duration < 0.4:
-                    subprocess.Popen(["/home/mixxx/mixxx-kb-toggle.sh"])
+                    subprocess.Popen(["/home/mixxx/Mixxx-touch-kb-overlay/mixxx-kb-toggle.sh"])
             
             self.is_dragging = False
             self.drag_unlocked = False
-            self.queue_draw() # Reset color back to gray
+            self.queue_draw() # Reset color back to solid slate gray
             return True
         return False
 
