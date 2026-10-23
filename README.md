@@ -1,72 +1,86 @@
-# Mixxx Wayland Touch Keyboard Overlay 🎛️🎹
+# Mixxx Touch Keyboard Overlay 🎛️⌨️
 
-An elegant, native Wayland AssistiveTouch-style floating button designed for the **Raspberry Pi 5** running **Mixxx** inside a **Labwc** compositor environment. It provides a persistent, translucent gray touch macro target layered permanently over full-screen DJ decks to easily trigger a virtual keyboard layout (`wvkbd`) without losing focus or exiting full-screen mode.
+A touch-friendly on-screen keyboard for **Mixxx** on the **Raspberry Pi 5** (Raspberry Pi OS, **labwc** / Wayland). It stays visible on top of **fullscreen** Mixxx, so you can search your library or type anywhere else without leaving fullscreen.
 
----
+A floating **KB** button toggles the keyboard. Both live on the Wayland **overlay** layer, which is above fullscreen windows.
+
+![Live keyboard overlay](screenshot_live.png)
 
 ## ✨ Features
-* **Translucent Gray Skin:** Styled natively with Cairo graphics to blend seamlessly into Mixxx's premium dark theme without distracting from active track visualizer waveforms.
-* **1-Second Hold-to-Drag Activation Lock:** Restrictive time gates ensure the button never moves by accident during quick crossfader or deck mixing manipulations. It flashes orange when movement is unlocked.
-* **Full-Screen Layer Shell Overlay:** Configured via `wvkbd` Layer-Shell mode (`-L overlay`) to forcefully override Mixxx's full-screen graphics, unlocking library search box text entry with a single tap.
-* **Accessories Menu Integration:** Seamlessly populates a custom shortcut into your Raspberry Pi OS **Start Menu -> Accessories** category list to quickly toggle the utility on or off.
-* **3-Second Vanish Timer:** Press and hold statically inside the touch target area for 3 seconds to cleanly close the tool workspace completely.
 
----
+- **Visible over fullscreen Mixxx**: both the button and the keyboard use the layer-shell `OVERLAY` layer.
+- **Never steals focus**: the keyboard takes no keyboard focus, so the search box you tapped stays active while you type.
+- **Works in any app**: keys are injected through `/dev/uinput`, not tied to Mixxx.
+- **Full touch keyboard**: number row, Shift (tap once for one capital, twice for caps lock), `?123` symbols page, Esc, Tab, Enter, Backspace, space and arrow keys.
+- **Hold-to-repeat** on Backspace and the arrow keys.
+- **Find key**: sends `Ctrl+F` to jump to Mixxx's library search box.
+- **Move key (⇅)**: flips the keyboard between the bottom and top of the screen.
+- **Draggable button**: hold for 1 second (it turns blue), then drag it anywhere.
+- **Single file**: no `wvkbd` and no helper scripts.
 
-## 🛠️ System Prerequisites
-Ensure your Raspberry Pi OS system layout is up to date and has the correct GTK Core drawing libraries installed:
-```bash
-sudo apt update
-sudo apt install -y python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 wvkbd
-```
+## 🎮 Button gestures
 
----
+| Gesture | Action |
+|---|---|
+| Tap | Show / hide the keyboard |
+| Hold 1 s, then drag | Move the button |
+| Hold 3 s (no movement) | Quit the overlay |
 
-## 🚀 Installation & Folder Directory Deployment
+Running the script a second time (for example from the start menu entry) stops the running copy, so the menu entry works as an on/off toggle.
 
-To organize and run the files exactly how they are structured in this repository, follow these quick terminal commands:
-
-1. Create and step into your local production directory folder workspace on your Pi:
-   ```bash
-   mkdir -p /home/mixxx/mixxx-touch-kb-overlay
-   cd /home/mixxx/mixxx-touch-kb-overlay
-   ```
-2. Clone or place the repository configuration files (`floating-touch-button.py`, `mixxx-kb-toggle.sh`, `mixxx-kb-menu-toggle.sh`, and `mixxx-kb-overlay.desktop`) directly inside that folder directory path.
-3. Ensure the script lines are marked as executable system targets:
-   ```bash
-   chmod +x floating-touch-button.py mixxx-kb-toggle.sh mixxx-kb-menu-toggle.sh
-   ```
-4. Copy the Desktop Entry file directly into your local local profiles tree repository to install it directly inside the system's active Start Menu viewports:
-   ```bash
-   mkdir -p ~/.local/share/applications/
-   cp /home/mixxx/mixxx-touch-kb-overlay/mixxx-kb-overlay.desktop ~/.local/share/applications/
-   ```
-
----
-
-## ⚙️ Setting Up Automation on Boot
-To automate your floating gray capsule to initialize automatically every single time your user profile launches inside Labwc, add the toggle controller script execution path directly into your local desktop compositor initialization file (`~/.config/labwc/autostart`):
+## 🛠️ Installation
 
 ```bash
-# Add this line at the bottom of your autostart file profile:
-/home/mixxx/mixxx-touch-kb-overlay/mixxx-kb-menu-toggle.sh &
+git clone https://github.com/djayza/Mixxx-touch-kb-overlay.git
+cd Mixxx-touch-kb-overlay
+chmod +x install.sh
+./install.sh
 ```
 
----
+Then **log out and back in** (or reboot). The `input` group membership that allows `/dev/uinput` only applies after a fresh login.
 
-## 📸 Application Interface Previews
+The installer does the following:
 
-To see the native overlay interface assets in action, view the operational layouts below:
+1. Installs `python3-gi`, `python3-gi-cairo`, `gir1.2-gtk-3.0`, `gir1.2-gtklayershell-0.1`, `python3-evdev` and `libnotify-bin`.
+2. Loads the `uinput` module at boot and adds a udev rule so the `input` group can use `/dev/uinput`.
+3. Adds your user to the `input` group.
+4. Copies the script to `~/mixxx-osk/mixxx-osk.py`.
+5. Adds a start menu entry (**Mixxx Touch Keyboard**).
+6. Adds the script to `~/.config/labwc/autostart` and removes the old `mixxx-kb-menu-toggle.sh` line if present.
 
-<table width="100%">
-  <tr>
-    <td width="50%" align="center">
-      <b>🎹 Active Live Keyboard Overlay View</b><br><br>
-      <img src="screenshot_live.png" width="100%" alt="Active Keyboard Deck Search Mode Preview">
-    </td>
-    <td width="50%" align="center">
-      <b>🛠 Accessories System Menu Toggle</b><br><br>
-      <img src="screenshot_menu.png" width="100%" alt="Accessories Menu Launcher Control Switch View">
-    </td>
-  </tr>
-</table>
+### Manual start
+
+```bash
+~/mixxx-osk/mixxx-osk.py
+```
+
+## ⌨️ Using it with Mixxx
+
+1. Tap the library search box (or press **Find** on the keyboard).
+2. Tap the **KB** button and type.
+3. Tap **Hide** or the **KB** button to close the keyboard.
+
+> ⚠️ If the search box is **not** focused, letter keys trigger Mixxx keyboard shortcuts (play, cue, and so on) instead of typing. Focus the box first.
+
+## 🔧 Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `Cannot open /dev/uinput` | Run `install.sh`, then log out and back in. Check with `groups` that `input` is listed. |
+| Button doesn't appear | Run `~/mixxx-osk/mixxx-osk.py` in a terminal and read the error. Make sure you're in a Wayland labwc session. |
+| Keys type the wrong characters | The key map assumes a **US** layout. Other layouts need the map in `mixxx-osk.py` adjusted. |
+| Keyboard covers what I need | Press the **⇅** key to move it to the top of the screen. |
+| `Failed to initialize layer surface` | Run with `LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgtk-layer-shell.so ~/mixxx-osk/mixxx-osk.py` |
+
+## 📁 Files
+
+| File | Purpose |
+|---|---|
+| `mixxx-osk.py` | The floating button and the keyboard |
+| `install.sh` | Dependencies, permissions, menu entry and autostart |
+
+## ℹ️ Why not `wvkbd`?
+
+Earlier versions launched `wvkbd`, which draws on the layer-shell `TOP` layer. Fullscreen windows sit on that same layer, so the keyboard opened hidden behind Mixxx. This version draws its own keyboard on the `OVERLAY` layer, which is always above fullscreen windows.
+
+## 📜 License <GPL-2.0>
